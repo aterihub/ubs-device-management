@@ -99,4 +99,75 @@ export default class DevicesController {
     return response.ok({ status: 'success', data: { counter, data } })
   }
 
+  async density({ response, request }: HttpContextContract) {
+    const { device, start, stop } = request.qs()
+
+    const flux = `
+    powerMesin = from(bucket: "ubs")
+      |> range(start: ${start}, stop: ${stop})
+      |> filter(fn: (r) => r["machine_name"] == "${device}")
+      |> filter(fn: (r) =>r["_measurement"] == "PowerMesin" )
+      |> aggregateWindow(every: 1h, fn: count)
+  
+    inputBarang = from(bucket: "ubs")
+      |> range(start: ${start}, stop: ${stop})
+      |> filter(fn: (r) => r["machine_name"] == "${device}")
+      |> filter(fn: (r) =>r["_measurement"] == "InputBarang" )
+      |> aggregateWindow(every: 1h, fn: count)
+    
+    outputBarang = from(bucket: "ubs")
+      |> range(start: ${start}, stop: ${stop})
+      |> filter(fn: (r) => r["machine_name"] == "${device}")
+      |> filter(fn: (r) =>r["_measurement"] == "OutputBarang" )
+      |> aggregateWindow(every: 1h, fn: count)
+    
+    rpm = from(bucket: "ubs")
+      |> range(start: ${start}, stop: ${stop})
+      |> filter(fn: (r) => r["machine_name"] == "${device}")
+      |> filter(fn: (r) =>r["_measurement"] == "RPM" )
+      |> aggregateWindow(every: 1h, fn: count)
+    
+    runMesin = from(bucket: "ubs")
+      |> range(start: ${start}, stop: ${stop})
+      |> filter(fn: (r) => r["machine_name"] == "${device}")
+      |> filter(fn: (r) =>r["_measurement"] == "RunMesin" )
+      |> aggregateWindow(every: 1h, fn: count)
+    
+    union(tables: [powerMesin, inputBarang, outputBarang, rpm, runMesin])
+    |> pivot(rowKey: ["_time"], columnKey: ["_measurement"], valueColumn: "_value")`
+
+    const data = await Influx.readPoints(flux) as Array<any>
+    data.forEach((v) => {
+      delete v.result
+      delete v.table
+      delete v._start
+      delete v._stop
+      delete v._field
+    })
+    return response.ok({ status: 'success', data })
+  }
+
+  async rebootCounter({ request, response }: HttpContextContract) {
+    const { device, start, stop } = request.qs()
+
+    const flux = `
+    from(bucket: "ubs-sampling")
+    |> range(start: ${start}, stop: ${stop})
+    |> filter(fn: (r) => r["_measurement"] == "device_connection")
+    |> filter(fn: (r) => r["_field"] == "status")
+    |> filter(fn: (r) => r["machine_name"] == "${device}")
+    |> stateCount(fn: (r) => r._value == "ONLINE", column: "count")
+    |> filter(fn: (r) => r.count == 1 )
+    |> count()`
+    console.log(flux)
+    const data = await Influx.readPoints(flux) as Array<any>
+    data.forEach((v) => {
+      delete v.result
+      delete v.table
+      delete v._start
+      delete v._stop
+      delete v._field
+    })
+    return response.ok({ status: 'success', data })
+  }
 }
