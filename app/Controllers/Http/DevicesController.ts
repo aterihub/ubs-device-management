@@ -159,7 +159,7 @@ export default class DevicesController {
     |> stateCount(fn: (r) => r._value == "ONLINE", column: "count")
     |> filter(fn: (r) => r.count == 1 )
     |> count()`
-    console.log(flux)
+
     const data = await Influx.readPoints(flux) as Array<any>
     data.forEach((v) => {
       delete v.result
