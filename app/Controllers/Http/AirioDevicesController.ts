@@ -176,7 +176,7 @@ export default class AirioDevicesController {
       |> filter(fn: (r) => r["device_id"] == "${device}")
       |> filter(fn: (r) => r["_field"] == "state" or r["_field"] == "detail")
       |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
-      |> filter(fn: (r) => r["state"] == "not changed")`
+      |> filter(fn: (r) => r["state"] == "changed")`
 
     const data = await Influx.readPoints(flux) as Array<any>
     data.forEach((v) => {
@@ -200,7 +200,8 @@ export default class AirioDevicesController {
     |> toInt()
     |> difference(nonNegative: false)
     |> filter(fn: (r) => (r["_value"] == 0))
-    |> count()`
+    |> aggregateWindow(every: 1h, fn: count)
+`
 
     const runMesinFlux = `
     from(bucket: "ubs")
@@ -211,7 +212,8 @@ export default class AirioDevicesController {
     |> toInt()
     |> difference(nonNegative: false)
     |> filter(fn: (r) => (r["_value"] == 0))
-    |> count()`
+    |> aggregateWindow(every: 1h, fn: count)
+`
 
     const outputBarangFlux = `
     from(bucket: "ubs")
@@ -222,7 +224,8 @@ export default class AirioDevicesController {
     |> toInt()
     |> difference(nonNegative: false)
     |> filter(fn: (r) => (r["_value"] == 0))
-    |> count()`
+    |> aggregateWindow(every: 1h, fn: count)
+`
 
     const inputBarangFlux = `
     from(bucket: "ubs")
@@ -233,7 +236,8 @@ export default class AirioDevicesController {
     |> toInt()
     |> difference(nonNegative: false)
     |> filter(fn: (r) => (r["_value"] == 0))
-    |> count()`
+    |> aggregateWindow(every: 1h, fn: count)
+`
 
     const [rpm, runMesin, outputBarang, inputBarang] = await Promise.all([
       Influx.readPoints(rpmFlux),
@@ -267,10 +271,10 @@ export default class AirioDevicesController {
     })
     return response.ok({
       status: 'success', data: {
-        rpm: rpm[0],
-        runMesin: runMesin[0],
-        outputBarang: outputBarang[0],
-        inputBarang: inputBarang[0]
+        rpm: rpm,
+        runMesin: runMesin,
+        outputBarang: outputBarang,
+        inputBarang: inputBarang
       }
     })
   }

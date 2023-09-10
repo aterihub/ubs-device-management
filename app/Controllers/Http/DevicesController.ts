@@ -182,7 +182,7 @@ export default class DevicesController {
       |> filter(fn: (r) => r["machine_name"] == "${device}")
       |> filter(fn: (r) => r["_field"] == "state" or r["_field"] == "detail")
       |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
-      |> filter(fn: (r) => r["state"] == "not changed")`
+      |> filter(fn: (r) => r["state"] == "changed")`
 
     const data = await Influx.readPoints(flux) as Array<any>
     data.forEach((v) => {
