@@ -1,7 +1,7 @@
 import type { HttpContextContract } from '@ioc:Adonis/Core/HttpContext'
 import Influx from '@ioc:Intellisense/Influx'
 
-export default class DevicesController {
+export default class AirioDevicesController {
   async getTray({ response, request }: HttpContextContract) {
     const { floor } = request.qs()
     const flux = `import "influxdata/influxdb/schema"
@@ -19,10 +19,9 @@ export default class DevicesController {
     return response.ok({ status: 'success', data })
   }
 
-  async getDevice({ response, request }: HttpContextContract) {
-    const { tray } = request.qs()
+  async getDevice({ response }: HttpContextContract) {
     const flux = `import "influxdata/influxdb/schema"
-    schema.tagValues(bucket: "ubs", tag: "machine_name" , predicate: (r) => r["tray"] == "${tray}")`
+    schema.tagValues(bucket: "ubs", tag: "device_id")`
 
     const data = await Influx.readPoints(flux)
     return response.ok({ status: 'success', data })
@@ -36,7 +35,7 @@ export default class DevicesController {
     
     connection = from(bucket: "ubs-sampling")
     |> range(start: -30d)
-    |> filter(fn: (r) => r["_measurement"] == "device_connection")
+    |> filter(fn: (r) => r["_measurement"] == "airio_device_connection")
     |> filter(fn: (r) => r["_field"] == "status" or r["_field"] == "uptime" or r["_field"] == "last_heard")
     |> last()
     |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
@@ -44,11 +43,12 @@ export default class DevicesController {
     
     status = from(bucket: "ubs-sampling")
     |> range(start: -30d)
-    |> filter(fn: (r) => r["_measurement"] == "device_status")
-    |> filter(fn: (r) => r["_field"] == "InputBarang" or r["_field"] == "OutputBarang" or r["_field"] == "PowerMesin" or r["_field"] == "RPM" or r["_field"] == "RunMesin" or r["_field"] == "message")
+    |> filter(fn: (r) => r["_measurement"] == "airio_device_status")
+    |> filter(fn: (r) => r["_field"] == "InputBarang" or r["_field"] == "OutputBarang" or r["_field"] == "RPM" or r["_field"] == "RunMesin" or r["_field"] == "message")
     |> last()
     |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
     |> group()
+    |> yield(name: "status")
     
     isEmpty = (tables) => {
       columnsArray = tables
@@ -58,17 +58,17 @@ export default class DevicesController {
     }
     
     isRightEmpty = isEmpty(tables: status)
-    rightDummy = array.from(rows: [{machine_name: "", InputBarang: -1.0, OutputBarang: -1.0, RPM: -1.0, PowerMesin: -1.0, RunMesin:-1.0, message: "" }])
+    rightDummy = array.from(rows: [{device_id: "", InputBarang: -1.0, OutputBarang: -1.0, RPM: -1.0, RunMesin:-1.0, message: "" }])
     
     join.left(
     left: connection |> group(),
     right: if isRightEmpty then rightDummy else status,
-    on: (l, r) => l.machine_name == r.machine_name,
+    on: (l, r) => l.device_id == r.device_id,
     as: (l, r) => {
             return {
             r with
             _time: l._time,
-            machine_name : l.machine_name,
+            device_id : l.device_id,
             status : l.status,
             uptime : l.uptime,
             last_heard : l.last_heard,
@@ -78,12 +78,11 @@ export default class DevicesController {
     },
     ) 
     |> map(fn: (r) => ({r with 
-      OutputBarang: if r["status"] == "OFFLINE" then -1.0 else r["OutputBarang"],
-      PowerMesin: if r["status"] == "OFFLINE" then -1.0 else r["PowerMesin"],
-      InputBarang: if r["status"] == "OFFLINE" then -1.0 else r["InputBarang"],
-      RPM: if r["status"] == "OFFLINE" then -1.0 else r["RPM"],
-      RunMesin: if r["status"] == "OFFLINE" then -1.0 else r["RunMesin"],
-      message: if r["status"] == "OFFLINE" then "MQTT not connected" else r["message"],
+    OutputBarang: if r["status"] == "OFFLINE" then -1.0 else r["OutputBarang"],
+    InputBarang: if r["status"] == "OFFLINE" then -1.0 else r["InputBarang"],
+    RPM: if r["status"] == "OFFLINE" then -1.0 else r["RPM"],
+    RunMesin: if r["status"] == "OFFLINE" then -1.0 else r["RunMesin"],
+    message: if r["status"] == "OFFLINE" then "MQTT not connected" else r["message"],
     })) 
     |> filter(fn: (r) => r["floor"] == "${floor}" and r["tray"] == "${tray}")
     `
@@ -124,38 +123,34 @@ export default class DevicesController {
     const { device, start, stop } = request.qs()
 
     const flux = `
-    powerMesin = from(bucket: "ubs")
+    rpm = from(bucket: "ubs")
       |> range(start: ${start}, stop: ${stop})
-      |> filter(fn: (r) => r["machine_name"] == "${device}")
-      |> filter(fn: (r) =>r["_measurement"] == "PowerMesin" )
+      |> filter(fn: (r) => r["device_id"] == "${device}")
+      |> filter(fn: (r) =>r["_measurement"] == "ch1A" )
       |> aggregateWindow(every: 1h, fn: count)
   
-    inputBarang = from(bucket: "ubs")
+    runMesin = from(bucket: "ubs")
       |> range(start: ${start}, stop: ${stop})
-      |> filter(fn: (r) => r["machine_name"] == "${device}")
-      |> filter(fn: (r) =>r["_measurement"] == "InputBarang" )
+      |> filter(fn: (r) => r["device_id"] == "${device}")
+      |> filter(fn: (r) =>r["_measurement"] == "ch1B" )
       |> aggregateWindow(every: 1h, fn: count)
     
     outputBarang = from(bucket: "ubs")
       |> range(start: ${start}, stop: ${stop})
-      |> filter(fn: (r) => r["machine_name"] == "${device}")
-      |> filter(fn: (r) =>r["_measurement"] == "OutputBarang" )
+      |> filter(fn: (r) => r["device_id"] == "${device}")
+      |> filter(fn: (r) =>r["_measurement"] == "ch2A" )
       |> aggregateWindow(every: 1h, fn: count)
     
-    rpm = from(bucket: "ubs")
+    inputBarang = from(bucket: "ubs")
       |> range(start: ${start}, stop: ${stop})
-      |> filter(fn: (r) => r["machine_name"] == "${device}")
-      |> filter(fn: (r) =>r["_measurement"] == "RPM" )
+      |> filter(fn: (r) => r["device_id"] == "${device}")
+      |> filter(fn: (r) =>r["_measurement"] == "ch3A" )
       |> aggregateWindow(every: 1h, fn: count)
     
-    runMesin = from(bucket: "ubs")
-      |> range(start: ${start}, stop: ${stop})
-      |> filter(fn: (r) => r["machine_name"] == "${device}")
-      |> filter(fn: (r) =>r["_measurement"] == "RunMesin" )
-      |> aggregateWindow(every: 1h, fn: count)
-    
-    union(tables: [powerMesin, inputBarang, outputBarang, rpm, runMesin])
-    |> pivot(rowKey: ["_time"], columnKey: ["_measurement"], valueColumn: "_value")`
+    union(tables: [inputBarang, outputBarang, rpm, runMesin])
+    |> pivot(rowKey: ["_time"], columnKey: ["_measurement"], valueColumn: "_value")
+    |> rename(columns: {ch1A: "RPM", ch1B: "RunMesin", ch2A: "OutputBarang", ch3A: "InputBarang"})
+    `
 
     const data = await Influx.readPoints(flux) as Array<any>
     data.forEach((v) => {
@@ -174,8 +169,8 @@ export default class DevicesController {
     const flux = `
     from(bucket: "ubs-sampling")
       |> range(start: ${start}, stop: ${stop})
-      |> filter(fn: (r) => r["_measurement"] == "device_connection")
-      |> filter(fn: (r) => r["machine_name"] == "${device}")
+      |> filter(fn: (r) => r["_measurement"] == "airio_device_connection")
+      |> filter(fn: (r) => r["device_id"] == "${device}")
       |> filter(fn: (r) => r["_field"] == "state" or r["_field"] == "detail")
       |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
       |> filter(fn: (r) => r["state"] == "not changed")`

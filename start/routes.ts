@@ -34,6 +34,14 @@ Route.group(() => {
       Route.get('density', 'DevicesController.density')
       Route.get('rebootCounter', 'DevicesController.rebootCounter')
     }).prefix('device')
+    Route.group(() => {
+      Route.get('getTray', 'AirioDevicesController.getTray')
+      Route.get('getFloor', 'AirioDevicesController.getFloor')
+      Route.get('getDevice', 'AirioDevicesController.getDevice')
+      Route.get('realtimeData', 'AirioDevicesController.realtimeData')
+      Route.get('density', 'AirioDevicesController.density')
+      Route.get('rebootCounter', 'AirioDevicesController.rebootCounter')
+    }).prefix('airio-device')
   }).prefix('v1')
 }).prefix('api')
 
