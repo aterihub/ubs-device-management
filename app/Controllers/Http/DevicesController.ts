@@ -31,6 +31,7 @@ export default class DevicesController {
   async realtimeData({ response, request }: HttpContextContract) {
     const { floor, tray } = request.qs()
 
+    const filterTray = (tray) ? `|> filter(fn: (r) => r["tray"] == "${tray}")` : ''
     const flux = `import "join"
     import "array"
     
@@ -85,7 +86,8 @@ export default class DevicesController {
       RunMesin: if r["status"] == "OFFLINE" then -1.0 else r["RunMesin"],
       message: if r["status"] == "OFFLINE" then "MQTT not connected" else r["message"],
     })) 
-    |> filter(fn: (r) => r["floor"] == "${floor}" and r["tray"] == "${tray}")
+    |> filter(fn: (r) => r["floor"] == "${floor}")
+    ${filterTray}
     `
 
     const data = await Influx.readPoints(flux) as Array<any>
