@@ -32,39 +32,51 @@ export default class DevicesController {
     const { floor, tray } = request.qs()
 
     const flux = `import "join"
-
+    import "array"
+    
     connection = from(bucket: "ubs-sampling")
-      |> range(start: 0)
-      |> filter(fn: (r) => r["_measurement"] == "device_connection")
-      |> filter(fn: (r) => r["_field"] == "status" or r["_field"] == "uptime")
-      |> last()
-      |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
-      |> group()
+    |> range(start: -30d)
+    |> filter(fn: (r) => r["_measurement"] == "device_connection")
+    |> filter(fn: (r) => r["_field"] == "status" or r["_field"] == "uptime" or r["_field"] == "last_heard")
+    |> last()
+    |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+    |> group()
     
     status = from(bucket: "ubs-sampling")
-      |> range(start: -30d)
-      |> filter(fn: (r) => r["_measurement"] == "device_status")
-      |> filter(fn: (r) => r["_field"] == "InputBarang" or r["_field"] == "OutputBarang" or r["_field"] == "PowerMesin" or r["_field"] == "RPM" or r["_field"] == "RunMesin" or r["_field"] == "message")
-      |> last()
-      |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+    |> range(start: -30d)
+    |> filter(fn: (r) => r["_measurement"] == "device_status")
+    |> filter(fn: (r) => r["_field"] == "InputBarang" or r["_field"] == "OutputBarang" or r["_field"] == "PowerMesin" or r["_field"] == "RPM" or r["_field"] == "RunMesin" or r["_field"] == "message")
+    |> last()
+    |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+    |> group()
+    
+    isEmpty = (tables) => {
+      columnsArray = tables
+        |> columns()
+        |> findColumn(fn: (key) => true, column: "_value")
+      return length(arr: columnsArray) == 0
+    }
+    
+    isRightEmpty = isEmpty(tables: status)
+    rightDummy = array.from(rows: [{machine_name: "", InputBarang: -1.0, OutputBarang: -1.0, RPM: -1.0, PowerMesin: -1.0, RunMesin:-1.0 }])
     
     join.left(
-        left: connection |> group(),
-        right: status |> group(),
-        on: (l, r) => l.machine_name == r.machine_name,
-        as: (l, r) => {
+    left: connection |> group(),
+    right: if isRightEmpty then rightDummy else status,
+    on: (l, r) => l.machine_name == r.machine_name,
+    as: (l, r) => {
             return {
-                r with
-                _time: l._time,
-                machine_name : l.machine_name,
-                status : l.status,
-                uptime : l.uptime,
-                tray : l.tray,
-                floor : l.floor
+            r with
+            _time: l._time,
+            machine_name : l.machine_name,
+            status : l.status,
+            uptime : l.uptime,
+            last_heard : l.last_heard,
+            tray : l.tray,
+            floor : l.floor
             }
-        },
+    },
     ) |> filter(fn: (r) => r["floor"] == "${floor}" and r["tray"] == "${tray}")
-    
     `
 
     const data = await Influx.readPoints(flux) as Array<any>
@@ -152,13 +164,12 @@ export default class DevicesController {
 
     const flux = `
     from(bucket: "ubs-sampling")
-    |> range(start: ${start}, stop: ${stop})
-    |> filter(fn: (r) => r["_measurement"] == "device_connection")
-    |> filter(fn: (r) => r["_field"] == "status")
-    |> filter(fn: (r) => r["machine_name"] == "${device}")
-    |> stateCount(fn: (r) => r._value == "ONLINE", column: "count")
-    |> filter(fn: (r) => r.count == 1 )
-    |> count()`
+      |> range(start: ${start}, stop: ${stop})
+      |> filter(fn: (r) => r["_measurement"] == "device_connection")
+      |> filter(fn: (r) => r["machine_name"] == "${device}")
+      |> filter(fn: (r) => r["_field"] == "state" or r["_field"] == "detail")
+      |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+      |> filter(fn: (r) => r["state"] == "changed")`
 
     const data = await Influx.readPoints(flux) as Array<any>
     data.forEach((v) => {
@@ -166,8 +177,7 @@ export default class DevicesController {
       delete v.table
       delete v._start
       delete v._stop
-      delete v._field
     })
-    return response.ok({ status: 'success', data })
+    return response.ok({ status: 'success', data : {detail : data, count : data.length} })
   }
 }
