@@ -41,6 +41,7 @@ Route.group(() => {
       Route.get('realtimeData', 'AirioDevicesController.realtimeData')
       Route.get('density', 'AirioDevicesController.density')
       Route.get('rebootCounter', 'AirioDevicesController.rebootCounter')
+      Route.get('duplicate', 'AirioDevicesController.duplicate')
     }).prefix('airio-device')
   }).prefix('v1')
 }).prefix('api')

@@ -185,6 +185,93 @@ export default class AirioDevicesController {
       delete v._start
       delete v._stop
     })
-    return response.ok({ status: 'success', data : {detail : data, count : data.length} })
+    return response.ok({ status: 'success', data: { detail: data, count: data.length } })
+  }
+
+  async duplicate({ request, response }: HttpContextContract) {
+    const { device, start, stop } = request.qs()
+
+    const rpmFlux = `
+    from(bucket: "ubs")
+    |> range(start: ${start}, stop: ${stop})
+    |> filter(fn: (r) => r["_measurement"] == "ch1A")
+    |> filter(fn: (r) => r["_field"] == "message_id")
+    |> filter(fn: (r) => r["device_id"] == "${device}")
+    |> toInt()
+    |> difference(nonNegative: false)
+    |> filter(fn: (r) => (r["_value"] == 0))
+    |> count()`
+
+    const runMesinFlux = `
+    from(bucket: "ubs")
+    |> range(start: ${start}, stop: ${stop})
+    |> filter(fn: (r) => r["_measurement"] == "ch1B")
+    |> filter(fn: (r) => r["_field"] == "message_id")
+    |> filter(fn: (r) => r["device_id"] == "${device}")
+    |> toInt()
+    |> difference(nonNegative: false)
+    |> filter(fn: (r) => (r["_value"] == 0))
+    |> count()`
+
+    const outputBarangFlux = `
+    from(bucket: "ubs")
+    |> range(start: ${start}, stop: ${stop})
+    |> filter(fn: (r) => r["_measurement"] == "ch2A")
+    |> filter(fn: (r) => r["_field"] == "message_id")
+    |> filter(fn: (r) => r["device_id"] == "${device}")
+    |> toInt()
+    |> difference(nonNegative: false)
+    |> filter(fn: (r) => (r["_value"] == 0))
+    |> count()`
+
+    const inputBarangFlux = `
+    from(bucket: "ubs")
+    |> range(start: ${start}, stop: ${stop})
+    |> filter(fn: (r) => r["_measurement"] == "ch3A")
+    |> filter(fn: (r) => r["_field"] == "message_id")
+    |> filter(fn: (r) => r["device_id"] == "${device}")
+    |> toInt()
+    |> difference(nonNegative: false)
+    |> filter(fn: (r) => (r["_value"] == 0))
+    |> count()`
+
+    const [rpm, runMesin, outputBarang, inputBarang] = await Promise.all([
+      Influx.readPoints(rpmFlux),
+      Influx.readPoints(runMesinFlux),
+      Influx.readPoints(outputBarangFlux),
+      Influx.readPoints(inputBarangFlux)]) as Array<any>
+
+    rpm.forEach((v) => {
+      delete v.result
+      delete v.table
+      delete v._start
+      delete v._stop
+    })
+    runMesin.forEach((v) => {
+      delete v.result
+      delete v.table
+      delete v._start
+      delete v._stop
+    })
+    outputBarang.forEach((v) => {
+      delete v.result
+      delete v.table
+      delete v._start
+      delete v._stop
+    })
+    inputBarang.forEach((v) => {
+      delete v.result
+      delete v.table
+      delete v._start
+      delete v._stop
+    })
+    return response.ok({
+      status: 'success', data: {
+        rpm: rpm[0],
+        runMesin: runMesin[0],
+        outputBarang: outputBarang[0],
+        inputBarang: inputBarang[0]
+      }
+    })
   }
 }
