@@ -21,8 +21,10 @@ export default class DevicesController {
 
   async getDevice({ response, request }: HttpContextContract) {
     const { tray } = request.qs()
+
+    const filterTray = (tray) ? ` predicate: (r) => r["tray"] == "${tray}"` : ''
     const flux = `import "influxdata/influxdb/schema"
-    schema.tagValues(bucket: "ubs", tag: "machine_name" , predicate: (r) => r["tray"] == "${tray}")`
+    schema.tagValues(bucket: "ubs", tag: "machine_name" , ${filterTray})`
 
     const data = await Influx.readPoints(flux)
     return response.ok({ status: 'success', data })
