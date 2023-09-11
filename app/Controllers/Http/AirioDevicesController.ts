@@ -184,7 +184,7 @@ export default class AirioDevicesController {
       delete v._start
       delete v._stop
     })
-    return response.ok({ status: 'success', data: { detail: data, count: data.length } })
+    return response.ok({ status: 'success', data: { detail: data, count: data.filter(x => x.detail === 'OFFLINE => ONLINE').length } })
   }
 
   async duplicate({ request, response }: HttpContextContract) {
