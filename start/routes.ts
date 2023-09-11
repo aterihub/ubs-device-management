@@ -44,6 +44,7 @@ Route.group(() => {
       Route.get('rebootCounter', 'AirioDevicesController.rebootCounter')
       Route.get('duplicate', 'AirioDevicesController.duplicate')
     }).prefix('airio-device')
+    Route.get('service', 'ServicesController.status')
   }).prefix('v1')
 }).prefix('api')
 
