@@ -191,6 +191,108 @@ export default class DevicesController {
       delete v._start
       delete v._stop
     })
-    return response.ok({ status: 'success', data : {detail : data, count : data.filter(x => x.detail === 'OFFLINE => ONLINE').length} })
+    return response.ok({ status: 'success', data: { detail: data, count: data.filter(x => x.detail === 'OFFLINE => ONLINE').length } })
+  }
+
+  async duplicate({ request, response }: HttpContextContract) {
+    const { device, start, stop } = request.qs()
+
+    const rpmFlux = `
+    from(bucket: "ubs")
+    |> range(start: ${start}, stop: ${stop})
+    |> filter(fn: (r) => r["_measurement"] == "RPM")
+    |> filter(fn: (r) => r["machine_name"] == "${device}")
+    |> map(fn: (r) => ({r with timeInt : int(v: r._time)}))
+    |> difference(columns: ["timeInt"])
+    |> filter(fn: (r) => r["timeInt"] < 4000000000)
+    |> aggregateWindow(every: 1h, fn: count)
+    `
+
+    const runMesinFlux = `
+    from(bucket: "ubs")
+    |> range(start: ${start}, stop: ${stop})
+    |> filter(fn: (r) => r["_measurement"] == "RunMesin")
+    |> filter(fn: (r) => r["machine_name"] == "${device}")
+    |> map(fn: (r) => ({r with timeInt : int(v: r._time)}))
+    |> difference(columns: ["timeInt"])
+    |> filter(fn: (r) => r["timeInt"] < 4000000000)
+    |> aggregateWindow(every: 1h, fn: count)
+    `
+
+    const outputBarangFlux = `
+    from(bucket: "ubs")
+    |> range(start: ${start}, stop: ${stop})
+    |> filter(fn: (r) => r["_measurement"] == "OutputBarang")
+    |> filter(fn: (r) => r["machine_name"] == "${device}")
+    |> map(fn: (r) => ({r with timeInt : int(v: r._time)}))
+    |> difference(columns: ["timeInt"])
+    |> filter(fn: (r) => r["timeInt"] < 4000000000)
+    |> aggregateWindow(every: 1h, fn: count)
+    `
+
+    const inputBarangFlux = `
+    from(bucket: "ubs")
+    |> range(start: ${start}, stop: ${stop})
+    |> filter(fn: (r) => r["_measurement"] == "InputBarang")
+    |> filter(fn: (r) => r["machine_name"] == "${device}")
+    |> map(fn: (r) => ({r with timeInt : int(v: r._time)}))
+    |> difference(columns: ["timeInt"])
+    |> filter(fn: (r) => r["timeInt"] < 4000000000)
+    |> aggregateWindow(every: 1h, fn: count)
+    `
+
+    const powerMesinFlux = `
+    from(bucket: "ubs")
+    |> range(start: ${start}, stop: ${stop})
+    |> filter(fn: (r) => r["_measurement"] == "PowerMesin")
+    |> filter(fn: (r) => r["machine_name"] == "${device}")
+    |> map(fn: (r) => ({r with timeInt : int(v: r._time)}))
+    |> difference(columns: ["timeInt"])
+    |> filter(fn: (r) => r["timeInt"] < 4000000000)
+    |> aggregateWindow(every: 1h, fn: count)
+    `
+
+    const [rpm, runMesin, outputBarang, inputBarang, powerMesin] = await Promise.all([
+      Influx.readPoints(rpmFlux),
+      Influx.readPoints(runMesinFlux),
+      Influx.readPoints(outputBarangFlux),
+      Influx.readPoints(inputBarangFlux),
+      Influx.readPoints(powerMesinFlux)]) as Array<any>
+    
+    rpm.forEach((v) => {
+      delete v.result
+      delete v.table
+      delete v._start
+      delete v._stop
+    })
+    runMesin.forEach((v) => {
+      delete v.result
+      delete v.table
+      delete v._start
+      delete v._stop
+    })
+    outputBarang.forEach((v) => {
+      delete v.result
+      delete v.table
+      delete v._start
+      delete v._stop
+    })
+    inputBarang.forEach((v) => {
+      delete v.result
+      delete v.table
+      delete v._start
+      delete v._stop
+    })
+    powerMesin.forEach((v) => {
+      delete v.result
+      delete v.table
+      delete v._start
+      delete v._stop
+    })
+    return response.ok({
+      status: 'success', data: {
+        rpm, runMesin, outputBarang, inputBarang, powerMesin
+      }
+    })
   }
 }

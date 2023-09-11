@@ -33,6 +33,7 @@ Route.group(() => {
       Route.get('realtimeData', 'DevicesController.realtimeData')
       Route.get('density', 'DevicesController.density')
       Route.get('rebootCounter', 'DevicesController.rebootCounter')
+      Route.get('duplicate', 'DevicesController.duplicate')
     }).prefix('device')
     Route.group(() => {
       Route.get('getTray', 'AirioDevicesController.getTray')
