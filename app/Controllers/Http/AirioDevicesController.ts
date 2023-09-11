@@ -50,7 +50,6 @@ export default class AirioDevicesController {
     |> last()
     |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
     |> group()
-    |> yield(name: "status")
     
     isEmpty = (tables) => {
       columnsArray = tables
