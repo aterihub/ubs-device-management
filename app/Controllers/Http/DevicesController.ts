@@ -94,22 +94,49 @@ export default class DevicesController {
 
     const data = await Influx.readPoints(flux) as Array<any>
 
-    const normal = data.filter(x => x.message === 'RUN NORMAL').length
-    const off = data.filter(x => x.message === 'MACHINE OFF').length
+    const machineOff = data.filter(x => x.message === 'MACHINE OFF').length
+    const powerErrorIdle = data.filter(x => x.message === 'POWER ERROR & IDLE').length
+    const powerErrorRpmDataErrorAllSensorAreUnreadable = data.filter(x => x.message === 'POWER ERROR & RPM DATA ERROR & ALL SENSOR ARE UNREADABLE').length
+    const powerErrorRpmDataErrorOutputUnreadable = data.filter(x => x.message === 'POWER ERROR & RPM DATA ERROR & OUTPUT UNREADABLE').length
+    const powerErrorRpmDataErrorInputSensorUnreadable = data.filter(x => x.message === 'POWER ERROR & RPM DATA ERROR & INPUT SENSOR UNREADABLE').length
+    const powerErrorRpmDataError = data.filter(x => x.message === 'POWER ERROR & RPM DATA ERROR').length
+    const powerErrorAllSensorAreUnreadable = data.filter(x => x.message === 'POWER ERROR & ALL SENSOR ARE UNREADABLE').length
+    const powerErrorOutputUnreadableStartProcess = data.filter(x => x.message === 'POWER ERROR & OUTPUT UNREADABLE / START PROCESS').length
+    const powerErrorInputSensorUnreadable = data.filter(x => x.message === 'POWER ERROR & INPUT SENSOR UNREADABLE').length
+    const powerErrorRunning = data.filter(x => x.message === 'POWER ERROR & RUNNING').length
     const idle = data.filter(x => x.message === 'IDLE').length
-    const faultySensors = data.filter(x => x.message === 'FAULTY SENSORS').length
-    const unreadbleSensors = data.filter(x => x.message === 'UNREADABLE SENSOR DATA').length
-    const undefined = data.filter(x => x.message === 'UNDEFINED').length
+    const rpmDataErrorAllSensorAreUnreadable = data.filter(x => x.message === 'RPM DATA ERROR & ALL SENSOR ARE UNREADABLE').length
+    const rpmDataErrorOutputUnreadable = data.filter(x => x.message === 'RPM DATA ERROR & OUTPUT UNREADABLE').length
+    const rpmDataErrorInputSensorUnreadable = data.filter(x => x.message === 'RPM DATA ERROR & INPUT SENSOR UNREADABLE').length
+    const rpmDataError = data.filter(x => x.message === 'RPM DATA ERROR').length
+    const allSensorAreUnreadable = data.filter(x => x.message === 'ALL SENSOR ARE UNREADABLE').length
+    const outputUnreadableStartProcess = data.filter(x => x.message === 'OUTPUT UNREADABLE / START PROCESS').length
+    const inputSensorUnreadable = data.filter(x => x.message === 'INPUT SENSOR UNREADABLE').length
+    const running = data.filter(x => x.message === 'POWER ERROR & RUNNING').length
     const online = data.filter(x => x.status === 'ONLINE').length
     const offline = data.filter(x => x.status === 'OFFLINE').length
     const total = data.length
 
     const counter = {
-      normal,
-      off,
+      machineOff,
+      powerErrorIdle,
+      powerErrorRpmDataErrorAllSensorAreUnreadable,
+      powerErrorRpmDataErrorOutputUnreadable,
+      powerErrorRpmDataErrorInputSensorUnreadable,
+      powerErrorRpmDataError,
+      powerErrorAllSensorAreUnreadable,
+      powerErrorOutputUnreadableStartProcess,
+      powerErrorInputSensorUnreadable,
+      powerErrorRunning,
       idle,
-      faultySensors,
-      unreadbleSensors,
+      rpmDataErrorAllSensorAreUnreadable,
+      rpmDataErrorOutputUnreadable,
+      rpmDataErrorInputSensorUnreadable,
+      rpmDataError,
+      allSensorAreUnreadable,
+      outputUnreadableStartProcess,
+      inputSensorUnreadable,
+      running,
       undefined,
       online,
       offline,
