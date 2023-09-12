@@ -113,6 +113,7 @@ export default class DevicesController {
     const outputUnreadableStartProcess = data.filter(x => x.message === 'OUTPUT UNREADABLE / START PROCESS').length
     const inputSensorUnreadable = data.filter(x => x.message === 'INPUT SENSOR UNREADABLE').length
     const running = data.filter(x => x.message === 'POWER ERROR & RUNNING').length
+    const undefined = data.filter(x => x.message === 'UNDEFINED').length
     const online = data.filter(x => x.status === 'ONLINE').length
     const offline = data.filter(x => x.status === 'OFFLINE').length
     const total = data.length
