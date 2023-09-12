@@ -294,6 +294,7 @@ export default class AirioDevicesController {
   
     data  |> filter(fn: (r) => r["_value"] >= first._value)
       |> unique()
+      |> sort(columns: ["_value"], desc: false)
       |> difference(nonNegative: false)
       |> map(fn: (r) => ({r with _value: if (r._value - 1) < 0 then 0 else (r._value - 1)}))
       |> aggregateWindow(every: 1h, fn: sum)
@@ -313,6 +314,7 @@ export default class AirioDevicesController {
   
     data  |> filter(fn: (r) => r["_value"] >= first._value)
       |> unique()
+      |> sort(columns: ["_value"], desc: false)
       |> difference(nonNegative: false)
       |> map(fn: (r) => ({r with _value: if (r._value - 1) < 0 then 0 else (r._value - 1)}))
       |> aggregateWindow(every: 1h, fn: sum)
@@ -332,6 +334,7 @@ export default class AirioDevicesController {
   
     data  |> filter(fn: (r) => r["_value"] >= first._value)
       |> unique()
+      |> sort(columns: ["_value"], desc: false)
       |> difference(nonNegative: false)
       |> map(fn: (r) => ({r with _value: if (r._value - 1) < 0 then 0 else (r._value - 1)}))
       |> aggregateWindow(every: 1h, fn: sum)
@@ -351,6 +354,7 @@ export default class AirioDevicesController {
   
     data  |> filter(fn: (r) => r["_value"] >= first._value)
       |> unique()
+      |> sort(columns: ["_value"], desc: false)
       |> difference(nonNegative: false)
       |> map(fn: (r) => ({r with _value: if (r._value - 1) < 0 then 0 else (r._value - 1)}))
       |> aggregateWindow(every: 1h, fn: sum)
