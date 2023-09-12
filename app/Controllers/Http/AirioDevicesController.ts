@@ -293,11 +293,11 @@ export default class AirioDevicesController {
     first = data |> findRecord(fn: (key) => key.device_id == "${device}", idx: 0)
   
     data  |> filter(fn: (r) => r["_value"] >= first._value)
-          |> unique()
-          |> map(fn: (r) => ({r with missing_data: (r._value)}))
-          |> difference(nonNegative: false, columns: ["missing_data"])
-          |> map(fn: (r) => ({r with missing_data: if (r.missing_data - 1) < 0 then 0 else (r.missing_data - 1)}))
-          |> aggregateWindow(every: 1h, fn: sum , column : "missing_data")
+      |> unique()
+      |> difference(nonNegative: false)
+      |> map(fn: (r) => ({r with _value: if (r._value - 1) < 0 then 0 else (r._value - 1)}))
+      |> aggregateWindow(every: 1h, fn: sum)
+
     `
 
     const runMesinFlux = `
@@ -312,11 +312,11 @@ export default class AirioDevicesController {
     first = data |> findRecord(fn: (key) => key.device_id == "${device}", idx: 0)
   
     data  |> filter(fn: (r) => r["_value"] >= first._value)
-          |> unique()
-          |> map(fn: (r) => ({r with missing_data: (r._value)}))
-          |> difference(nonNegative: false, columns: ["missing_data"])
-          |> map(fn: (r) => ({r with missing_data: if (r.missing_data - 1) < 0 then 0 else (r.missing_data - 1)}))
-          |> aggregateWindow(every: 1h, fn: sum , column : "missing_data")
+      |> unique()
+      |> difference(nonNegative: false)
+      |> map(fn: (r) => ({r with _value: if (r._value - 1) < 0 then 0 else (r._value - 1)}))
+      |> aggregateWindow(every: 1h, fn: sum)
+
     `
 
     const outputBarangFlux = `
@@ -331,11 +331,11 @@ export default class AirioDevicesController {
     first = data |> findRecord(fn: (key) => key.device_id == "${device}", idx: 0)
   
     data  |> filter(fn: (r) => r["_value"] >= first._value)
-          |> unique()
-          |> map(fn: (r) => ({r with missing_data: (r._value)}))
-          |> difference(nonNegative: false, columns: ["missing_data"])
-          |> map(fn: (r) => ({r with missing_data: if (r.missing_data - 1) < 0 then 0 else (r.missing_data - 1)}))
-          |> aggregateWindow(every: 1h, fn: sum , column : "missing_data")
+      |> unique()
+      |> difference(nonNegative: false)
+      |> map(fn: (r) => ({r with _value: if (r._value - 1) < 0 then 0 else (r._value - 1)}))
+      |> aggregateWindow(every: 1h, fn: sum)
+
     `
 
     const inputBarangFlux = `
@@ -350,11 +350,11 @@ export default class AirioDevicesController {
     first = data |> findRecord(fn: (key) => key.device_id == "${device}", idx: 0)
   
     data  |> filter(fn: (r) => r["_value"] >= first._value)
-          |> unique()
-          |> map(fn: (r) => ({r with missing_data: (r._value)}))
-          |> difference(nonNegative: false, columns: ["missing_data"])
-          |> map(fn: (r) => ({r with missing_data: if (r.missing_data - 1) < 0 then 0 else (r.missing_data - 1)}))
-          |> aggregateWindow(every: 1h, fn: sum , column : "missing_data")
+      |> unique()
+      |> difference(nonNegative: false)
+      |> map(fn: (r) => ({r with _value: if (r._value - 1) < 0 then 0 else (r._value - 1)}))
+      |> aggregateWindow(every: 1h, fn: sum)
+
     `
 
     const [rpm, runMesin, outputBarang, inputBarang] = await Promise.all([
