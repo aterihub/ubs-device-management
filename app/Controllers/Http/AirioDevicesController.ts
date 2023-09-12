@@ -277,4 +277,123 @@ export default class AirioDevicesController {
       }
     })
   }
+
+  async missing({ request, response }: HttpContextContract) {
+    const { device, start, stop } = request.qs()
+
+    const rpmFlux = `
+    data = from(bucket: "ubs")
+    |> range(start: ${start}, stop: ${stop})
+    |> filter(fn: (r) => r["_measurement"] == "ch1A")
+    |> filter(fn: (r) => r["_field"] == "message_id")
+    |> filter(fn: (r) => r["device_id"] == "${device}")
+    |> sort(columns: ["_time"], desc: false)
+    |> toInt()
+  
+    first = data |> findRecord(fn: (key) => key.device_id == "${device}", idx: 0)
+  
+    data  |> filter(fn: (r) => r["_value"] >= first._value)
+          |> unique()
+          |> map(fn: (r) => ({r with missing_data: (r._value)}))
+          |> difference(nonNegative: false, columns: ["missing_data"])
+          |> map(fn: (r) => ({r with missing_data: if (r.missing_data - 1) < 0 then 0 else (r.missing_data - 1)}))
+          |> aggregateWindow(every: 1h, fn: sum , column : "missing_data")
+    `
+
+    const runMesinFlux = `
+    data = from(bucket: "ubs")
+    |> range(start: ${start}, stop: ${stop})
+    |> filter(fn: (r) => r["_measurement"] == "ch1B")
+    |> filter(fn: (r) => r["_field"] == "message_id")
+    |> filter(fn: (r) => r["device_id"] == "${device}")
+    |> sort(columns: ["_time"], desc: false)
+    |> toInt()
+  
+    first = data |> findRecord(fn: (key) => key.device_id == "${device}", idx: 0)
+  
+    data  |> filter(fn: (r) => r["_value"] >= first._value)
+          |> unique()
+          |> map(fn: (r) => ({r with missing_data: (r._value)}))
+          |> difference(nonNegative: false, columns: ["missing_data"])
+          |> map(fn: (r) => ({r with missing_data: if (r.missing_data - 1) < 0 then 0 else (r.missing_data - 1)}))
+          |> aggregateWindow(every: 1h, fn: sum , column : "missing_data")
+    `
+
+    const outputBarangFlux = `
+    data = from(bucket: "ubs")
+    |> range(start: ${start}, stop: ${stop})
+    |> filter(fn: (r) => r["_measurement"] == "ch2A")
+    |> filter(fn: (r) => r["_field"] == "message_id")
+    |> filter(fn: (r) => r["device_id"] == "${device}")
+    |> sort(columns: ["_time"], desc: false)
+    |> toInt()
+  
+    first = data |> findRecord(fn: (key) => key.device_id == "${device}", idx: 0)
+  
+    data  |> filter(fn: (r) => r["_value"] >= first._value)
+          |> unique()
+          |> map(fn: (r) => ({r with missing_data: (r._value)}))
+          |> difference(nonNegative: false, columns: ["missing_data"])
+          |> map(fn: (r) => ({r with missing_data: if (r.missing_data - 1) < 0 then 0 else (r.missing_data - 1)}))
+          |> aggregateWindow(every: 1h, fn: sum , column : "missing_data")
+    `
+
+    const inputBarangFlux = `
+    data = from(bucket: "ubs")
+    |> range(start: ${start}, stop: ${stop})
+    |> filter(fn: (r) => r["_measurement"] == "ch3A")
+    |> filter(fn: (r) => r["_field"] == "message_id")
+    |> filter(fn: (r) => r["device_id"] == "${device}")
+    |> sort(columns: ["_time"], desc: false)
+    |> toInt()
+  
+    first = data |> findRecord(fn: (key) => key.device_id == "${device}", idx: 0)
+  
+    data  |> filter(fn: (r) => r["_value"] >= first._value)
+          |> unique()
+          |> map(fn: (r) => ({r with missing_data: (r._value)}))
+          |> difference(nonNegative: false, columns: ["missing_data"])
+          |> map(fn: (r) => ({r with missing_data: if (r.missing_data - 1) < 0 then 0 else (r.missing_data - 1)}))
+          |> aggregateWindow(every: 1h, fn: sum , column : "missing_data")
+    `
+
+    const [rpm, runMesin, outputBarang, inputBarang] = await Promise.all([
+      Influx.readPoints(rpmFlux),
+      Influx.readPoints(runMesinFlux),
+      Influx.readPoints(outputBarangFlux),
+      Influx.readPoints(inputBarangFlux)]) as Array<any>
+
+    rpm.forEach((v) => {
+      delete v.result
+      delete v.table
+      delete v._start
+      delete v._stop
+    })
+    runMesin.forEach((v) => {
+      delete v.result
+      delete v.table
+      delete v._start
+      delete v._stop
+    })
+    outputBarang.forEach((v) => {
+      delete v.result
+      delete v.table
+      delete v._start
+      delete v._stop
+    })
+    inputBarang.forEach((v) => {
+      delete v.result
+      delete v.table
+      delete v._start
+      delete v._stop
+    })
+    return response.ok({
+      status: 'success', data: {
+        rpm: rpm,
+        runMesin: runMesin,
+        outputBarang: outputBarang,
+        inputBarang: inputBarang
+      }
+    })
+  }
 }

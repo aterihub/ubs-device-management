@@ -43,6 +43,7 @@ Route.group(() => {
       Route.get('density', 'AirioDevicesController.density')
       Route.get('rebootCounter', 'AirioDevicesController.rebootCounter')
       Route.get('duplicate', 'AirioDevicesController.duplicate')
+      Route.get('missing', 'AirioDevicesController.missing')
     }).prefix('airio-device')
     Route.get('service', 'ServicesController.status')
   }).prefix('v1')
