@@ -136,24 +136,28 @@ export default class AirioDevicesController {
     rpm = from(bucket: "ubs")
       |> range(start: ${start}, stop: ${stop})
       |> filter(fn: (r) => r["device_id"] == "${device}")
+      |> filter(fn: (r) => r["_field"] == "message_id")
       |> filter(fn: (r) =>r["_measurement"] == "ch1A" )
       |> aggregateWindow(every: 1h, fn: count)
   
     runMesin = from(bucket: "ubs")
       |> range(start: ${start}, stop: ${stop})
       |> filter(fn: (r) => r["device_id"] == "${device}")
+      |> filter(fn: (r) => r["_field"] == "message_id")
       |> filter(fn: (r) =>r["_measurement"] == "ch1B" )
       |> aggregateWindow(every: 1h, fn: count)
     
     outputBarang = from(bucket: "ubs")
       |> range(start: ${start}, stop: ${stop})
       |> filter(fn: (r) => r["device_id"] == "${device}")
+      |> filter(fn: (r) => r["_field"] == "message_id")
       |> filter(fn: (r) =>r["_measurement"] == "ch2A" )
       |> aggregateWindow(every: 1h, fn: count)
     
     inputBarang = from(bucket: "ubs")
       |> range(start: ${start}, stop: ${stop})
       |> filter(fn: (r) => r["device_id"] == "${device}")
+      |> filter(fn: (r) => r["_field"] == "message_id")
       |> filter(fn: (r) =>r["_measurement"] == "ch3A" )
       |> aggregateWindow(every: 1h, fn: count)
     
